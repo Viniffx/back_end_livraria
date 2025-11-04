@@ -1,0 +1,10 @@
+SHOW EVENTS
+
+SHOW stored PROCEDURE
+
+SHOW TRIGGER;
+
+SHOW procedure STATUS WHERE 'escola_db'
+
+
+
