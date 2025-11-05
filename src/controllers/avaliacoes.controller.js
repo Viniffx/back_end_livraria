@@ -2,22 +2,45 @@ import {db} from "../config/db.js";
 
 
 export async function criarAvaliacao (req, res){
-  try {
-    const { nota, comentario, data } = req.body;
-    if (!nota || !comentario || !data)
-      return res.status(400).json({ erro: "Campos obrigatórios" });
+    try {
+        const { usuario_id, livro_id, nota, comentario } = req.body;
+        
+        const notaDecimal = Number.parseFloat(Number(nota).toFixed(1))
+        if (!usuario_id || !livro_id || !nota) return res.status(400).json({ erro: "Preencha os campos obrigatórios" });
 
-    await db.execute(
-      "INSERT INTO avaliacoes (nota, comentario, data_avaliacao) VALUES (?, ?, ?)",
-      [nota, comentario, data_avaliacao]
-    );
+        if(nota >10 || nota <0){
+            return res.status(400).json({erro:"Por favor, a nota deve ser maior que 0 e menor que 10."})
+        }
+        const [resultado] = await db.execute(
+            "SELECT * from avaliacoes WHERE usuario_id = ? AND livro_id = ?",
+            [usuario_id, livro_id]
+        );
 
-    res.json({ mensagem: "Avaliação criada com sucesso!" });
-  } catch (err) {
-    res.status(500).json({ erro: err.message });
-  }
+        console.log(resultado)
+        if(resultado.length > 0){
+            return res.status(200).json({msg:"Usuario ja fez avaliação ."})
+        }
+        const [inserir] = await db.execute(
+            "INSERT INTO avaliacoes (usuario_id, livro_id, nota, comentario) VALUES (?, ?, ?, ?)",
+            [usuario_id, livro_id, notaDecimal, comentario]
+        );
+
+        console.log(inserir)
+
+        if(inserir.affectedRows >= 1){
+             res.status(200).json({ mensagem: "Avaliação criada com sucesso!" ,
+                id: inserir.insertId
+             });
+        }else{
+            res.status(500).json({ erro: err.message });
+        }
+
+       
+    } catch (err) {
+        res.status(500).json({ erro: err.message });
+        res.send("Erro ao solicitar requisição")
+    }
 };
-
 
 export async function listarAvaliacoes (req, res){
   try {
