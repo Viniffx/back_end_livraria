@@ -59,7 +59,7 @@ export async function criarReserva(req, res) {
         if (!usuario_id || !livro_id || !data_retirada || !data_devolucao) {
             return res.status(400).json({
                 sucesso: false,
-                mensagem: 'Campos obrigatórios: usuario_id, livro_id, data_retirada, data_devolucao'
+                mensagem: 'Campos obrigatórios: usuario_id, livro_id, data_retirada, data_devolucao. Data (AAAA-MM-DD)'
             });
         }
         
