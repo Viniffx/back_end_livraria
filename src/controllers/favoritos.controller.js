@@ -1,158 +1,43 @@
 import {db} from "../config/db.js";
 
 export async function listarFavoritos(req, res) {
-    try {       
-        try {
-            // Query SQL para listar todos os livros favoritos com informações relacionadas
-            const query = `
-                SELECT 
-                    f.id,
-                    f.usuario_id,
-                    f.livro_id,
-                    f.criado_em,
-                    u.nome as usuario_nome,
-                    u.email as usuario_email,
-                    l.titulo as livro_titulo,
-                    l.autor as livro_autor,
-                    l.isbn as livro_isbn,
-                    l.ano_publicacao as livro_ano_publicacao,
-                    l.disponivel as livro_disponivel
-                FROM favoritos f
-                LEFT JOIN usuarios u ON f.usuario_id = u.id
-                LEFT JOIN livros l ON f.livro_id = l.id
-                ORDER BY f.criado_em DESC
-            `;
-            
-            const [favoritos] = await db.execute(query);
-            
-            // Retornar sucesso com a lista de favoritos
-            return res.status(200).json({
-                sucesso: true,
-                mensagem: 'Livros favoritos listados com sucesso',
-                total: favoritos.length,
-                dados: favoritos
-            });
-            
-        } finally {
-            // Liberar a conexão
-            db.release();
-        }
-        
-    } catch (erro) {
-        console.error('Erro ao listar livros favoritos:', erro);
-        return res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao listar livros favoritos',
-            erro: erro.message
-        });
-    }
-}
+     try {
+    const [rows] = await db.execute("SELECT * FROM favoritos");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ erro: err.message });
+  }
+};
 
 export async function criarFavoritos(req, res) {
+       console.log(req.body)
     try {
-        // Extrair dados do corpo da requisição
-        const { usuario_id, livro_id} = req.body;
-        
-        // Validação dos campos obrigatórios
-        if (!usuario_id || !livro_id) {
-            return res.status(400).json({
+        const { usuario_id, livro_id } = req.body;
+        if (!usuario_id || !livro_id)
+            return res.status(400).json({ erro: "Preencha os campos obrigatórios" });
+
+        const [usuarios] = await db.execute(
+            'SELECT id FROM usuarios WHERE id = ?',
+            [usuario_id]
+        );
+        if (usuarios.length === 0) {
+            return res.status(404).json({
                 sucesso: false,
-                mensagem: 'Campos obrigatórios: usuario, livro'
+                mensagem: 'Usuário não encontrado'
             });
         }
-                
-        try {
-            // Verificar se o usuário existe
-            const [usuarios] = await db.execute(
-                'SELECT id FROM usuarios WHERE id = ?',
-                [usuario_id]
-            );
-            
-            if (usuarios.length === 0) {
-                return res.status(404).json({
-                    sucesso: false,
-                    mensagem: 'Usuário não encontrado'
-                });
-            }
-            
-            // Verificar se o livro existe
-            const [livros] = await db.execute(
-                'SELECT id FROM livros WHERE id = ?',
-                [livro_id]
-            );
-            
-            if (livros.length === 0) {
-                return res.status(404).json({
-                    sucesso: false,
-                    mensagem: 'Livro não encontrado'
-                });
-            }
-            
-            // Verificar se o livro já está nos favoritos do usuário
-            const [favoritoExistente] = await db.execute(
-                'SELECT id FROM favoritos WHERE usuario_id = ? AND livro_id = ?',
-                [usuario_id, livro_id]
-            );
-            
-            if (favoritoExistente.length > 0) {
-                return res.status(409).json({
-                    sucesso: false,
-                    mensagem: 'Este livro já está nos favoritos do usuário'
-                });
-            }
-            
-            // Inserir o novo favorito
-            const query = `
-                INSERT INTO favoritos 
-                (usuario_id, livro_id, data_favoritado) 
-                VALUES (?, ?, NOW())
-            `;
-            
-            const [resultado] = await db.execute(query, [
-                usuario_id,
-                livro_id
-            ]);
-            
-            // Buscar o favorito criado com informações completas
-            const [favoritoCriado] = await db.execute(
-                `SELECT 
-                    f.id,
-                    f.usuario_id,
-                    f.livro_id,
-                    f.criado_em,
-                    u.nome as usuario_nome,
-                    u.email as usuario_email,
-                    l.titulo as livro_titulo,
-                    l.autor as livro_autor,
-                    l.isbn as livro_isbn,
-                    l.ano_publicacao as livro_ano_publicacao,
-                    l.disponivel as livro_disponivel
-                FROM favoritos f
-                LEFT JOIN usuarios u ON f.usuario_id = u.id
-                LEFT JOIN livros l ON f.livro_id = l.id
-                WHERE f.id = ?`,
-                [resultado.insertId]
-            );
-            
-            return res.status(201).json({
-                sucesso: true,
-                mensagem: 'Livro adicionado aos favoritos com sucesso',
-                dados: favoritoCriado[0]
-            });
-            
-        } finally {
-            db.release();
-        }
-        
-    } catch (erro) {
-        console.error('Erro ao criar favorito:', erro);
-        return res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao adicionar livro aos favoritos',
-           //erro: erro.message
-        });
+
+
+        await db.execute(
+            "INSERT INTO favoritos (usuario_id, livro_id) VALUES (?, ?)",
+            [usuario_id, livro_id]
+        );
+
+        res.json({ mensagem: "Livro adicionado aos favoritos com sucesso!" });
+    } catch (err) {
+        res.status(500).json({ erro: err.message });
     }
-}
+};
 
 export async function deletarFavorito (req, res){
     try {
